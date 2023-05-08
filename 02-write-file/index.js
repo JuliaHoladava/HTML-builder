@@ -19,6 +19,14 @@ fs.writeFile(
 stdout.write('Hi, new user!\n');
 
 function appendFile(data) {
+  if (data.toLowerCase().trim() === 'exit') {
+    stdout.write('Good luck!');
+    rl.close();
+    process.exit();
+  } else {
+    rl.question('Type something here: ', appendFile);
+  }
+
   fs.appendFile(
     path.join(__dirname, 'notes.txt'),
     data,
@@ -29,14 +37,6 @@ function appendFile(data) {
 };
 
 rl.question('Type something here: ', appendFile);
-
-rl.on('line', (input) => {
-  console.log('input', input);
-  if (input.toLowerCase().trim() === 'exit') {
-    stdout.write('Good luck!');
-    process.exit();
-  }
-});
 
 rl.on('SIGINT', () => {
   stdout.write('Good luck!');
