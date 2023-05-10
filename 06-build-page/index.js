@@ -24,35 +24,59 @@ fs.readFile(
   'utf-8',
   (err, data) => {
     if (err) throw err;
-    const templateCont = data;
+    let templateCont = data;
 
     const regex = /{{(.+?)}}/g;
     let array;
     let i = 0;
+
+    const componentBody = async (word, componentName) => {
+      try {
+        const componentCont = await fs.promises.readFile(
+          path.join(path.join(__dirname, 'components'), `${componentName}.html`),
+          'utf-8'
+        );
+        return componentCont;
+      } catch (err) {
+        throw err;
+      }
+    };
+
+    const replaceCallback = async (word, componentName) => {
+      const componentCont = await componentBody(word, componentName);
+      return componentCont;
+    };
+
+    const replacePromises = [];
+    const placeholders = [];
     while ((array = regex.exec(templateCont)) !== null) {
       let word = array[i];
-      i += 1;
+      array[i] = array[i].replace(/{{(.+?)}}/g, '$1');
 
-      const replasedCont = templateCont.replace(/{{(.+?)}}/g, (word, componentName) => {
-        const componentCont = fs.readFileSync(
-          path.join(path.join(__dirname, 'components'), `${componentName}.html`),
-          'utf-8',
-          (err) => {
-            if (err) throw err;
-          });
+      replacePromises.push(replaceCallback(word, array[i]));
+      placeholders.push(array[i]);
+    }
 
-          return componentCont;
-      })
+    Promise.all(replacePromises)
+      .then((replacements) => {
+        let replacedCont = templateCont;
+        for (let j = 0; j < replacements.length; j++) {
+          replacedCont = replacedCont.replace(`{{${placeholders[j]}}}`, replacements[j]);
+        }
 
-      fs.writeFileSync(
+      fs.writeFile(
         path.join(__dirname, 'project-dist', 'index.html'),
-        replasedCont,
+        replacedCont,
         (err) => {
           if (err) throw err;
         });
-    };
+      })
+      .catch((err) => {
+        throw err;
+      }
+    );
   }
-)
+);
 
 //create style.css file
 fs.writeFile(
